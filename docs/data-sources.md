@@ -21,7 +21,7 @@ The headline dataset and the reason this project uses Spark. ~9 million rows is 
 - **Landing page:** https://data.cms.gov/provider-summary-by-type-of-service/medicare-physician-other-practitioners/medicare-physician-other-practitioners-by-provider-and-service
 - **Filename decoded:** `MUP_PHY` = Medicare Utilization Payment, Physician. `R25` = Release 25. `P05` = Publication 5. `V20` = Version 20. `D23` = Data year 2023.
 
-The CMS data file naming convention is a portfolio-worthy detail in itself — it tells you exactly when the file was prepared and which data year it covers, which is the kind of metadata that matters when you're reconciling multiple sources.
+The CMS data file naming convention encodes the release and data year directly in the filename, which makes it easy to confirm you're working with the right vintage when reconciling multiple sources.
 
 ## 2. Hospital General Information
 
