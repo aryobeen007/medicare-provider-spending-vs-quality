@@ -1,0 +1,23 @@
+﻿# Data files — raw CSVs stay local, never committed
+data/*
+!data/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Databricks
+.databricks/
+*.dbc
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local notebook outputs
+*.ipynb_checkpoints/
