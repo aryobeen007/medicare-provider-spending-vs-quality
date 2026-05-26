@@ -12,9 +12,9 @@ flowchart TD
     classDef goldStyle fill:#ffd700,stroke:#b8860b,stroke-width:2px,color:#000,font-size:14px,font-weight:bold
     classDef outputStyle fill:#4a90e2,stroke:#2c5f9e,stroke-width:2px,color:#fff,font-size:14px,font-weight:bold
 
-    RAW["<b>RAW</b><br/>4 CSV files from CMS<br/>~9.5M rows total"]:::rawStyle
+    RAW["<b>RAW</b><br/>5 CSV files from CMS<br/>~10M rows total"]:::rawStyle
 
-    BRONZE["<b>BRONZE</b> — Delta tables, schema enforced<br/><br/>medicare_physician_payments &nbsp;•&nbsp; hospital_info<br/>hospital_quality_measures &nbsp;•&nbsp; provider_specialty_ref"]:::bronzeStyle
+    BRONZE["<b>BRONZE</b> — Delta tables, schema enforced<br/><br/>medicare_physician_payments &nbsp;•&nbsp; hospital_info<br/>complications_and_deaths &nbsp;•&nbsp; unplanned_hospital_visits<br/>hcahps"]:::bronzeStyle
 
     SILVER["<b>SILVER</b> — cleaned, deduplicated, standardized<br/><br/>providers (1 row per NPI)<br/>provider_services (NPI × service)<br/>hospital_quality (hospital × measure)"]:::silverStyle
 
@@ -44,7 +44,7 @@ Mixing these means every change to a business rule ripples back into your ingest
 
 Bronze tables are nearly identical to the source CSVs. The only transformations:
 
-- **CSV to Delta format.** Delta gives ACID transactions, schema enforcement, time travel, and faster reads. Once it's in Delta we never go back to raw CSV.
+- **CSV to Delta format.** Delta gives ACID transactions, schema enforcement, time travel, and faster reads. Once it's in Delta the raw CSV isn't read again.
 - **Schema explicitly declared.** No `inferSchema=True` — every column gets a deliberate type at this layer. This catches CMS schema drift the moment it happens instead of silently coercing.
 - **Ingestion metadata added.** A `_ingested_at` timestamp and `_source_file` column on every bronze table, for lineage.
 
@@ -55,7 +55,7 @@ Nothing else. No deduplication, no joins, no business logic. Bronze is the durab
 Silver is where the data becomes usable. Decisions made at this layer:
 
 - **Deduplicate.** CMS files have duplicate rows in places, especially when providers practice at multiple locations.
-- **Standardize codes.** Specialty codes get joined to the reference table. State codes get validated against a known list. HCPCS codes get checked for format.
+- **Standardize values.** Specialty names get normalized (CMS uses inconsistent capitalization and spacing across the file). State codes get validated against a known list. HCPCS codes get checked for format.
 - **Handle suppression markers.** CMS uses `*` and various flags to indicate suppressed small-cell values. Silver translates these to proper `NULL` so downstream aggregations behave correctly.
 - **Define the canonical grain for each entity.** `silver.providers` has one row per NPI — this is the grain decision that the rest of the project depends on.
 
@@ -91,8 +91,9 @@ medicare_provider_quality (catalog)
 ├── bronze (schema)
 │   ├── medicare_physician_payments
 │   ├── hospital_info
-│   ├── hospital_quality_measures
-│   └── provider_specialty_ref
+│   ├── complications_and_deaths
+│   ├── unplanned_hospital_visits
+│   └── hcahps
 ├── silver (schema)
 │   ├── providers
 │   ├── provider_services
