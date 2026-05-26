@@ -1,4 +1,4 @@
-﻿# Data files — raw CSVs stay local, never committed
+# Data files � raw CSVs stay local, never committed
 data/*
 !data/.gitkeep
 
@@ -11,7 +11,7 @@ venv/
 
 # Databricks
 .databricks/
-*.dbc
+# *.dbc  -- removed: we want to commit exported notebooks
 
 # OS / editor
 .DS_Store
