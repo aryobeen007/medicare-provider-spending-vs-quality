@@ -64,12 +64,12 @@ Silver tables are what an analyst would query if they wanted "the cleaned data."
 
 ### Gold — analytical aggregates
 
-Gold tables answer specific business questions. Each one corresponds to a slice of the analysis:
+Gold tables answer specific business questions. Each one is denormalized for dashboard reads, with derived analytical columns pre-computed:
 
-- **`gold.provider_spending_summary`** — one row per provider, total Medicare payments, service counts, specialty, state. The base table for the "top spenders" analysis.
-- **`gold.specialty_benchmarks`** — medians and percentiles of spending and service volume by specialty. The base for "spending variation by specialty."
-- **`gold.state_spending_quality`** — state-level rollups of provider spending joined to state-level quality measure aggregates. The base for the geographic variation maps.
-- **`gold.hospital_value_scorecard`** — hospital-level integration of spending intensity and quality scores. The base for the cost-quality scatter analysis.
+- **`gold.provider_spending_summary`** — one row per individual NPI with payment rank (nationwide, within-specialty, within-state) and percentile pre-computed. The "who are the highest-spending providers" table. Building this surfaced a real CMS data pattern: in some specialties (Nurse Practitioner most visibly), the top NPIs reflect organizational billing aggregation rather than individual physician earnings.
+- **`gold.specialty_benchmarks`** — one row per specialty with median, P25/P75/P95, max payment, and a top-1% spending concentration ratio. Built on medians rather than means specifically because the organizational-billing pattern would distort mean-based metrics. The concentration ratio metric exposes that pattern as a numeric signature — normal specialties show 10-15% concentration at the top 1%, the affected specialties show 20-30%.
+- **`gold.state_spending_quality`** — one row per state with spending and quality side-by-side, aggregated independently at state grain (no row-level join needed). Reveals what the literature has been saying for two decades: state-level quality variation is small (~10% range), state-level spending variation is large (~70% range).
+- **`gold.hospital_value_scorecard`** — one row per hospital (matched via the bridge) with spending intensity, all 12 quality measures, a composite mortality score, and a `value_quadrant` label (high/low cost × high/low quality). The headline table for the project's central business question. The four quadrants come out roughly equal — about half of US hospitals are value-mismatched in one direction or the other.
 
 Gold tables are denormalized on purpose. They're optimized for being read by dashboards and notebooks, not for being maintained as part of a normalized schema.
 
