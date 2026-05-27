@@ -16,7 +16,7 @@ flowchart TD
 
     BRONZE["<b>BRONZE</b> — Delta tables, schema enforced<br/><br/>medicare_physician_payments &nbsp;•&nbsp; hospital_info<br/>complications_and_deaths &nbsp;•&nbsp; unplanned_hospital_visits<br/>hcahps"]:::bronzeStyle
 
-    SILVER["<b>SILVER</b> — cleaned, deduplicated, standardized<br/><br/>providers (1 row per NPI)<br/>provider_services (NPI × service)<br/>hospital_quality (hospital × measure)"]:::silverStyle
+    SILVER["<b>SILVER</b> — cleaned, deduplicated, standardized<br/><br/>providers (1 row per NPI) &nbsp;•&nbsp; provider_services<br/>hospitals &nbsp;•&nbsp; hospital_quality<br/>npi_to_ccn_bridge"]:::silverStyle
 
     GOLD["<b>GOLD</b> — analytical aggregates<br/><br/>provider_spending_summary &nbsp;•&nbsp; specialty_benchmarks<br/>state_spending_quality &nbsp;•&nbsp; hospital_value_scorecard"]:::goldStyle
 
@@ -52,12 +52,13 @@ Nothing else. No deduplication, no joins, no business logic. Bronze is the durab
 
 ### Silver — cleaned and conformed
 
-Silver is where the data becomes usable. Decisions made at this layer:
+Silver is where the data becomes usable. The five silver tables and what each one handles:
 
-- **Deduplicate.** CMS files have duplicate rows in places, especially when providers practice at multiple locations.
-- **Standardize values.** Specialty names get normalized (CMS uses inconsistent capitalization and spacing across the file). State codes get validated against a known list. HCPCS codes get checked for format.
-- **Handle suppression markers.** CMS uses `*` and various flags to indicate suppressed small-cell values. Silver translates these to proper `NULL` so downstream aggregations behave correctly.
-- **Define the canonical grain for each entity.** `silver.providers` has one row per NPI — this is the grain decision that the rest of the project depends on.
+- **`silver.providers`** — aggregates MUP-PHY from its NPI × HCPCS × place-of-service grain down to one row per NPI. Defines primary location and primary specialty for providers who bill from multiple locations or under multiple specialty codes.
+- **`silver.provider_services`** — the line-item version of MUP-PHY, cleaned but not aggregated. Used for analyses that need per-service granularity.
+- **`silver.hospitals`** — cleaned hospital reference, filtered to acute care hospitals only. Adds normalized address fields for downstream matching.
+- **`silver.hospital_quality`** — unifies three quality bronze tables (`complications_and_deaths`, `unplanned_hospital_visits`, `hcahps`) into one long-format hospital × measure table, filtered to ~12 high-signal measures.
+- **`silver.npi_to_ccn_bridge`** — derives an NPI ↔ CCN match table through exact address matching, since CMS doesn't publish a direct linkage.
 
 Silver tables are what an analyst would query if they wanted "the cleaned data." They're not pre-aggregated for any specific question.
 
@@ -97,7 +98,9 @@ medicare_provider_quality (catalog)
 ├── silver (schema)
 │   ├── providers
 │   ├── provider_services
-│   └── hospital_quality
+│   ├── hospitals
+│   ├── hospital_quality
+│   └── npi_to_ccn_bridge
 └── gold (schema)
     ├── provider_spending_summary
     ├── specialty_benchmarks
