@@ -122,13 +122,21 @@ A few things that might look like omissions:
 
 These are decisions, not gaps. Building infrastructure that doesn't match the actual data refresh cadence is a common mistake and worth flagging up front.
 
-## Reproducibility
+## Reproducibility — the Databricks Workflow
 
-The full pipeline will be reproducible by running the notebooks in order:
+The full pipeline is orchestrated as a Databricks Job (`medicare_provider_quality_pipeline`) that chains the four notebooks into a single runnable DAG:
 
-1. Ingestion notebook (raw CSV → bronze)
-2. Silver transformation notebooks
-3. Gold aggregation notebooks
-4. Analysis notebooks
+```
+bronze_ingestion → silver_transforms → gold_aggregates → analysis
+```
 
-Each notebook will be idempotent — running it twice produces the same result as running it once. Non-idempotent pipelines are a common source of bugs that only surface on re-runs, after the original author has moved on to other work.
+Each task runs on Serverless compute with a `depends_on` link to the previous task. Downstream tasks only fire when upstream tasks succeed — if bronze fails, nothing downstream runs.
+
+End-to-end runtime is around 5.5 minutes:
+
+- `bronze_ingestion` — ~3m 15s (re-ingests the 2.85 GB MUP-PHY CSV plus four smaller files)
+- `silver_transforms` — ~1m 7s (modeling, joins, bridge match)
+- `gold_aggregates` — ~44s (analytical aggregations)
+- `analysis` — ~17s (chart rendering against pre-aggregated gold)
+
+The timing profile validates the medallion design — most work happens once at bronze, downstream layers are cheap because they read pre-computed data. Each notebook is idempotent: running it twice produces the same result as running it once, because every Delta write uses `mode("overwrite")` rather than appending. Non-idempotent pipelines are a common source of bugs that only surface on re-runs.
