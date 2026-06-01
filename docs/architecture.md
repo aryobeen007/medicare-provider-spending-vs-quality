@@ -140,3 +140,22 @@ End-to-end runtime is around 5.5 minutes:
 - `analysis` — ~17s (chart rendering against pre-aggregated gold)
 
 The timing profile validates the medallion design — most work happens once at bronze, downstream layers are cheap because they read pre-computed data. Each notebook is idempotent: running it twice produces the same result as running it once, because every Delta write uses `mode("overwrite")` rather than appending. Non-idempotent pipelines are a common source of bugs that only surface on re-runs.
+
+## Visualization layer
+
+Two dashboards present the analytical findings, each with a different job:
+
+- **Databricks AI/BI dashboard** (`Medicare Provider Spending vs. Quality`) — built natively against the gold tables in Unity Catalog. Four visuals in a 2×2 grid (hospital cost-vs-quality scatter, state scatter, specialty concentration bars, top providers table) with a state filter that cascades across three of the four visuals. The published version is account-scoped per Databricks Free Edition's sharing model, so it's preserved here through committed screenshots rather than a live public link.
+- **Tableau Public dashboard** — built from CSV exports of the same gold tables and published publicly at [public.tableau.com/app/profile/naseer3899/viz/MedicareProviderSpendingvsQuality](https://public.tableau.com/app/profile/naseer3899/viz/MedicareProviderSpendingvsQuality/MedicareProviderSpendingvsQuality). Same four visuals, same color semantics, but reachable by anyone without a login. This is the public-facing artifact.
+
+Both dashboards tell the same story from the same gold tables. The Databricks one demonstrates platform skill (building dashboards inside the lakehouse). The Tableau one is a public deliverable accessible without a Databricks account.
+
+## What this analysis does NOT claim
+
+Three limitations belong on every claim from this work:
+
+- **Not causal.** Sicker populations cost more and have worse outcomes regardless of care quality. This data can't separate "spending doesn't help" from "high-need areas spend more and still struggle."
+- **Not complete on quality.** Mortality is one dimension. A fuller picture would weight readmissions, patient experience, and safety together.
+- **Bounded by the bridge.** The hospital-level analysis only covers hospitals where the Tier 1 address-matching bridge connected providers (62.6% of acute care hospitals), and is biased toward providers whose MUP-PHY billing address exactly matches their hospital's address.
+
+The value of this work is in showing — with reproducible code on real federal data — that the intuitive "you get what you pay for" assumption does not hold for Medicare spending and hospital quality. The analytical claim is narrow and defensible. The pipeline that produces it is the substantive engineering artifact.
